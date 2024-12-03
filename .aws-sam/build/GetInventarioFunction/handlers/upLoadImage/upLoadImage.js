@@ -50,7 +50,7 @@ exports.handler = async (event) => {
     // Subir el archivo al bucket
     await s3.send(command);
 
-    const url = `https://${bucketName}.s3.amazonaws.com/${filePath}`;
+    const url = `s3://${bucketName}/${filePath}`;
 
     // Actualizar la tabla DynamoDB
     const updateParams = {
@@ -60,15 +60,14 @@ exports.handler = async (event) => {
         id: record.id,
       },
       UpdateExpression: `
-        SET #url = :url,
+        SET comprobante = :comprobante,
             #estatus = :estatus
       `,
       ExpressionAttributeNames: {
-        "#url": "url", // Nombre del campo en la tabla
-        "#estatus": "estatus", // Nombre del campo en la tabla
+        "#estatus": "estatus", // Alias para el nombre del campo "estatus"
       },
       ExpressionAttributeValues: {
-        ":url": url, // URL generada para la imagen
+        ":comprobante": url, // URL generada para la imagen
         ":estatus": "Facturacion", // Nuevo estado
       },
       ReturnValues: "UPDATED_NEW",
@@ -82,7 +81,7 @@ exports.handler = async (event) => {
       headers,
       body: JSON.stringify({
         message: "Archivo subido y actualizado correctamente",
-        url,
+        comprobante: url,
         dynamoResult: updateResult.Attributes,
       }),
     };

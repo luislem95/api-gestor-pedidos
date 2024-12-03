@@ -36,6 +36,33 @@ Resources:
       CodeUri: UploadImageFunction
     Metadata:
       SamResourceId: UploadImageFunction
+  GetSignedUrlFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handlers/getS3/getS3.handler
+      Runtime: nodejs20.x
+      FunctionName: getSignedUrl
+      Description: "Genera URLs prefirmadas para las im\xE1genes en S3."
+      MemorySize: 128
+      Environment:
+        Variables:
+          BUCKET_NAME:
+            Ref: S3Store
+          FOLDER_NAME:
+            Ref: S3ImagenesFolder
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /get-signed-url
+            Method: GET
+      Policies:
+      - S3CrudPolicy:
+          BucketName:
+            Ref: S3Store
+      CodeUri: GetSignedUrlFunction
+    Metadata:
+      SamResourceId: GetSignedUrlFunction
   GetInventarioFunction:
     Type: AWS::Serverless::Function
     Properties:

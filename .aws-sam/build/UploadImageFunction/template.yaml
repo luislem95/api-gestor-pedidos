@@ -17,6 +17,7 @@ Parameters:
 Globals:
   Function:
     Timeout: 10
+
 Resources:
   UploadImageFunction:
     Type: AWS::Serverless::Function
@@ -35,6 +36,29 @@ Resources:
             BucketName: !Ref S3Store  
         - DynamoDBCrudPolicy:
             TableName: general-storage
+
+  GetSignedUrlFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handlers/getS3/getS3.handler
+      Runtime: nodejs20.x
+      FunctionName: getSignedUrl
+      Description: Genera URLs prefirmadas para las imágenes en S3.
+      MemorySize: 128
+      Environment:
+        Variables:
+          BUCKET_NAME: !Ref S3Store
+          FOLDER_NAME: !Ref S3ImagenesFolder
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /get-signed-url
+            Method: GET
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref S3Store  
+
 
   GetInventarioFunction:
     Type: AWS::Serverless::Function
@@ -71,7 +95,6 @@ Resources:
             Path: /historial
             Method: ANY
       Policies:
-      # - AWSLambdaBasicExecutionRole
       - DynamoDBCrudPolicy:
           TableName: general-storage
 
@@ -92,7 +115,6 @@ Resources:
           Properties:
             Path: /confirmar-pedido
             Method: ANY
-
       Policies:
       - DynamoDBCrudPolicy:
           TableName: general-storage

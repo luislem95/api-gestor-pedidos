@@ -1,5 +1,5 @@
 const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
-const { DynamoDBDocumentClient, PutCommand, UpdateCommand, ScanCommand } = require("@aws-sdk/lib-dynamodb");
+const { DynamoDBDocumentClient, PutCommand, UpdateCommand } = require("@aws-sdk/lib-dynamodb");
 
 const client = new DynamoDBClient({ region: "us-east-1" });
 const dynamoDb = DynamoDBDocumentClient.from(client);
@@ -57,61 +57,39 @@ exports.handler = async (event) => {
   const TableName = "general-storage";
 
   try {
-    let newNumeroPedido = numeroPedido;
-
     if (numeroPedido === "nuevo") {
-      // Escanear la tabla para encontrar el último número de pedido
-      const scanParams = {
-        TableName,
-        ProjectionExpression: "numeroPedido",
-        FilterExpression: "attribute_exists(numeroPedido)",
-      };
-
-      const scanResult = await dynamoDb.send(new ScanCommand(scanParams));
-      const numerosPedidos = scanResult.Items.map((item) => parseInt(item.numeroPedido, 10)).filter((num) => !isNaN(num));
-
-      // Determinar el nuevo número de pedido
-      if (numerosPedidos.length > 0) {
-        newNumeroPedido = Math.max(...numerosPedidos) + 1;
-      } else {
-        newNumeroPedido = 10000; // Si no hay pedidos, empieza en 10000
-      }
-
-      console.log("Nuevo número de pedido generado:", newNumeroPedido);
-
-      // Crear un nuevo pedido
-      const params = {
-        TableName,
-        Item: {
-          tipo,
-          id,
-          comprobante,
-          duiEmpleado,
-          duiEmpresa,
-          empleadoName,
-          estatus,
-          fecha,
-          items,
-          numeroPedido: newNumeroPedido.toString(), // Guarda como string
-          total,
-          user_id,
-        },
-        ConditionExpression: "attribute_not_exists(tipo) AND attribute_not_exists(id)",
-      };
-
+        const params = {
+          TableName,
+          Item: {
+            tipo,
+            id,
+            comprobante,
+            duiEmpleado,
+            duiEmpresa,
+            empleadoName,
+            estatus,
+            fecha,
+            items,
+            numeroPedido: id, // Usa el ID como numeroPedido para nuevos pedidos
+            total,
+            user_id,
+          },
+          ConditionExpression: "attribute_not_exists(tipo) AND attribute_not_exists(id)",
+        };
       await dynamoDb.send(new PutCommand(params));
 
       return {
         statusCode: 200,
         headers: { "Access-Control-Allow-Origin": "*" },
-        body: JSON.stringify({ message: "Pedido creado con éxito", pedidoId: id, numeroPedido: newNumeroPedido }),
+        body: JSON.stringify({ message: "Pedido creado con éxito", pedidoId: id }),
       };
     } else {
       // Actualizar pedido existente
       const params = {
         TableName,
         Key: { tipo, id: numeroPedido }, // Usa numeroPedido como el ID del pedido existente
-        UpdateExpression: `SET comprobante = :comprobante,
+        UpdateExpression: `
+          SET comprobante = :comprobante,
               duiEmpleado = :duiEmpleado,
               duiEmpresa = :duiEmpresa,
               empleadoName = :empleadoName,
@@ -119,7 +97,8 @@ exports.handler = async (event) => {
               fecha = :fecha,
               #total = :total,
               user_id = :user_id,
-              #items = list_append(if_not_exists(#items, :empty_list), :new_items)`,
+              #items = list_append(if_not_exists(#items, :empty_list), :new_items)
+        `,
         ExpressionAttributeNames: {
           "#total": "total",
           "#items": "items",
