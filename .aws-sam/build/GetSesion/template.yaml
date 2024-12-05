@@ -16,9 +16,29 @@ Parameters:
 
 Globals:
   Function:
-    Timeout: 10
+    Timeout: 30
 
 Resources:
+  GetSesion:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handlers/getSesion/getSesion.handler
+      Runtime: nodejs20.x
+      FunctionName: claro-store-pedido-getSesion   
+      Description: Sirve para traer la sesion o crear una si no existe y poder manejar el carrito.
+      Environment:
+        Variables:
+          TABLE_NAME: general-storage
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /sesion
+            Method: ANY
+      Policies:
+      - DynamoDBCrudPolicy:
+          TableName: general-storage
+
   UploadImageFunction:
     Type: AWS::Serverless::Function
     Properties:

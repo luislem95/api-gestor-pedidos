@@ -7,6 +7,6 @@ architecture = "x86_64"
 handler = "handlers/getAllUsers.handler"
 manifest_hash = ""
 packagetype = "Zip"
-functions = ["UploadImageFunction", "GetSignedUrlFunction", "GetInventarioFunction", "GetHistorialFunction", "ConfirmarPedido", "PutPedido"]
+functions = ["GetSesion", "UploadImageFunction", "GetSignedUrlFunction", "GetInventarioFunction", "GetHistorialFunction", "ConfirmarPedido", "PutPedido"]
 
 [layer_build_definitions]
