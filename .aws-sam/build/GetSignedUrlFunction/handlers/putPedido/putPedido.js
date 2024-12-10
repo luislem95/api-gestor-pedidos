@@ -76,6 +76,7 @@ exports.handler = async (event) => {
             cantidad: { N: newItem.cantidad.toString() },
             electronico: { S: newItem.electronico },
             nombre: { S: newItem.nombre },
+            imagen: { S: newItem.imagen },
             precio: { N: newItem.precio.toString() },
             tipo: { S: newItem.tipo },
           },

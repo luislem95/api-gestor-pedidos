@@ -4,21 +4,22 @@ const { QueryCommand } = require("@aws-sdk/lib-dynamodb");
 exports.handler = async (event) => {
   try {
     const params = {
-        TableName: "general-storage",
-        KeyConditionExpression: "PK = :partitionKey",
-        KeyConditionExpression: "#tipo = :tipoValue", // Solo clave de partición
+      TableName: "general-storage",
+      KeyConditionExpression: "#tipo = :tipoValue", // Clave de partición
       ExpressionAttributeNames: {
         "#tipo": "tipo", // Clave de partición
       },
       ExpressionAttributeValues: {
         ":tipoValue": "claro-store-inventario", // Valor fijo de tipo
-      }
-      };
-      console.log("Params enviados:", JSON.stringify(params));
+      },
+      ProjectionExpression: "cantidad, electronico, id, imagen, nombre, precio, tipo", // Las columnas deseadas
+    };
 
-      const data = await ddb.send(new QueryCommand(params));
-      
-      console.log("Respuesta de DynamoDB:", JSON.stringify(data));
+    console.log("Params enviados:", JSON.stringify(params));
+
+    const data = await ddb.send(new QueryCommand(params));
+
+    console.log("Respuesta de DynamoDB:", JSON.stringify(data));
 
     return {
       statusCode: 200,

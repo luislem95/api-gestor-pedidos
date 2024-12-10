@@ -76,6 +76,7 @@ exports.handler = async (event) => {
             cantidad: { N: newItem.cantidad.toString() },
             electronico: { S: newItem.electronico },
             nombre: { S: newItem.nombre },
+            imagen: { S: newItem.imagen },
             precio: { N: newItem.precio.toString() },
             tipo: { S: newItem.tipo },
           },
@@ -109,8 +110,6 @@ exports.handler = async (event) => {
 
     // Enviar el comando de actualización
     const result = await dynamoDB.send(new UpdateItemCommand(updateParams));
-
-    console.log("Datos actualizados con éxito:", result.Attributes);
 
     return {
       statusCode: 200,
