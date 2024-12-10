@@ -1,158 +1,138 @@
-const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
-const { DynamoDBDocumentClient, PutCommand, UpdateCommand, ScanCommand } = require("@aws-sdk/lib-dynamodb");
+const { DynamoDBClient, GetItemCommand, UpdateItemCommand } = require("@aws-sdk/client-dynamodb");
 
-const client = new DynamoDBClient({ region: "us-east-1" });
-const dynamoDb = DynamoDBDocumentClient.from(client);
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "OPTIONS, POST",
-  "Access-Control-Allow-Headers": "Content-Type",
-};
+const dynamoDB = new DynamoDBClient({ region: "us-east-1" });
 
 exports.handler = async (event) => {
-  console.log("Evento recibido en Lambda:", event);
+  const fechaActual = new Date().toLocaleString("es-SV", {
+    timeZone: "America/El_Salvador",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
 
+  const headers = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+  };
+
+  // Manejar preflight
   if (event.httpMethod === "OPTIONS") {
-    return { statusCode: 200, headers: corsHeaders, body: null };
-  }
-
-  if (!event.body) {
-    console.error("El cuerpo de la solicitud está vacío.");
     return {
-      statusCode: 400,
-      headers: corsHeaders,
-      body: JSON.stringify({ message: "El cuerpo de la solicitud no puede estar vacío." }),
+      statusCode: 200,
+      headers,
     };
   }
 
-  let requestBody;
   try {
-    requestBody = JSON.parse(event.body);
-  } catch (error) {
-    console.error("Error al parsear el body:", error);
-    return {
-      statusCode: 400,
-      headers: corsHeaders,
-      body: JSON.stringify({ message: "El cuerpo de la solicitud no es un JSON válido." }),
-    };
-  }
+    const body = JSON.parse(event.body);
 
-  const {
-    tipo,
-    id,
-    comprobante,
-    duiEmpleado,
-    duiEmpresa,
-    empleadoName,
-    estatus,
-    fecha = new Date().toISOString(),
-    items = [],
-    numeroPedido,
-    total,
-    user_id,
-  } = requestBody;
+    const { tipo, duiEmpleado, carrito, estatus } = body;
 
-  const TableName = "general-storage";
-
-  // Calcular total
-  const calculatedTotal = items.reduce(
-    (sum, item) => sum + (parseFloat(item.cantidad) * parseFloat(item.precio) || 0),
-    0
-  );
-
-  try {
-    let newNumeroPedido = numeroPedido;
-
-    if (numeroPedido === "nuevo") {
-      const scanParams = {
-        TableName,
-        ProjectionExpression: "numeroPedido",
-        FilterExpression: "attribute_exists(numeroPedido)",
-      };
-
-      const scanResult = await dynamoDb.send(new ScanCommand(scanParams));
-      const numerosPedidos = scanResult.Items.map((item) => parseInt(item.numeroPedido, 10)).filter((num) => !isNaN(num));
-
-      newNumeroPedido = numerosPedidos.length > 0 ? Math.max(...numerosPedidos) + 1 : 10000;
-
-      console.log("Nuevo número de pedido generado:", newNumeroPedido);
-
-      const params = {
-        TableName,
-        Item: {
-          tipo,
-          id,
-          comprobante,
-          duiEmpleado,
-          duiEmpresa,
-          empleadoName,
-          estatus,
-          fecha,
-          items,
-          numeroPedido: newNumeroPedido.toString(),
-          total: calculatedTotal.toFixed(2),
-          user_id,
-        },
-        ConditionExpression: "attribute_not_exists(tipo) AND attribute_not_exists(id)",
-      };
-
-      await dynamoDb.send(new PutCommand(params));
-
+    // Validar los parámetros necesarios
+    if (!tipo || !duiEmpleado || !carrito) {
       return {
-        statusCode: 200,
-        headers: corsHeaders,
-        body: JSON.stringify({ message: "Pedido creado con éxito", pedidoId: id, numeroPedido: newNumeroPedido }),
-      };
-    } else {
-      const params = {
-        TableName,
-        Key: { tipo, id: numeroPedido },
-        UpdateExpression: `SET comprobante = :comprobante,
-              duiEmpleado = :duiEmpleado,
-              duiEmpresa = :duiEmpresa,
-              empleadoName = :empleadoName,
-              estatus = :estatus,
-              fecha = :fecha,
-              #total = :total,
-              user_id = :user_id,
-              #items = list_append(if_not_exists(#items, :empty_list), :new_items)`,
-        ExpressionAttributeNames: {
-          "#total": "total",
-          "#items": "items",
-        },
-        ExpressionAttributeValues: {
-          ":comprobante": comprobante,
-          ":duiEmpleado": duiEmpleado,
-          ":duiEmpresa": duiEmpresa,
-          ":empleadoName": empleadoName,
-          ":estatus": estatus,
-          ":fecha": fecha,
-          ":total": calculatedTotal.toFixed(2),
-          ":user_id": user_id,
-          ":new_items": items,
-          ":empty_list": [],
-        },
-        ReturnValues: "UPDATED_NEW",
-      };
-
-      const result = await dynamoDb.send(new UpdateCommand(params));
-
-      return {
-        statusCode: 200,
-        headers: corsHeaders,
+        statusCode: 400,
+        headers,
         body: JSON.stringify({
-          message: "Pedido actualizado con éxito",
-          updatedAttributes: result.Attributes,
+          message: "Todos los campos son requeridos: tipo, duiEmpleado, carrito.",
         }),
       };
     }
+
+    // Obtener el carrito actual desde DynamoDB
+    const getItemParams = {
+      TableName: "general-storage",
+      Key: {
+        tipo: { S: tipo },
+        id: { S: duiEmpleado },
+      },
+      ProjectionExpression: "carrito", // Solo obtenemos el carrito
+    };
+
+    const currentData = await dynamoDB.send(new GetItemCommand(getItemParams));
+    let currentCarrito = currentData.Item?.carrito?.L || [];
+
+    // Actualizar el carrito con los nuevos datos
+    carrito.forEach((newItem) => {
+      const existingItemIndex = currentCarrito.findIndex(
+        (item) => item.M.id.S === newItem.id
+      );
+    
+      if (existingItemIndex >= 0) {
+        // Si el producto existe, actualizar su cantidad
+        const existingItem = currentCarrito[existingItemIndex];
+        const currentCantidad = parseInt(existingItem.M.cantidad.N, 10); // Convertir a número
+        const newCantidad = parseInt(newItem.cantidad, 10); // Convertir a número
+        existingItem.M.cantidad.N = (currentCantidad + newCantidad).toString(); // Sumar y convertir de vuelta a texto
+      } else {
+        // Si no existe, agregar como nuevo
+        currentCarrito.push({
+          M: {
+            id: { S: newItem.id },
+            cantidad: { N: newItem.cantidad.toString() },
+            electronico: { S: newItem.electronico },
+            nombre: { S: newItem.nombre },
+            precio: { N: newItem.precio.toString() },
+            tipo: { S: newItem.tipo },
+          },
+        });
+      }
+    });
+    
+    // Parámetros para actualizar DynamoDB
+    const updateParams = {
+      TableName: "general-storage",
+      Key: {
+        tipo: { S: tipo },
+        id: { S: duiEmpleado },
+      },
+      UpdateExpression: `
+        SET 
+          estatus = :estatus,
+          fecha = :fecha,
+          #carritoAlias = :updatedCarrito
+      `,
+      ExpressionAttributeNames: {
+        "#carritoAlias": "carrito", // Alias para el atributo reservado `carrito`
+      },
+      ExpressionAttributeValues: {
+        ":estatus": { S: estatus || "Pendiente" },
+        ":fecha": { S: fechaActual },
+        ":updatedCarrito": { L: currentCarrito },
+      },
+      ReturnValues: "UPDATED_NEW",
+    };
+
+    // Enviar el comando de actualización
+    const result = await dynamoDB.send(new UpdateItemCommand(updateParams));
+
+    console.log("Datos actualizados con éxito:", result.Attributes);
+
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({
+        message: "Datos actualizados con éxito",
+        updatedAttributes: result.Attributes,
+      }),
+    };
   } catch (error) {
-    console.error("Error al procesar la solicitud:", error);
+    console.error("Error al procesar la solicitud:", {
+      message: error.message,
+      stack: error.stack,
+    });
+
     return {
       statusCode: 500,
-      headers: corsHeaders,
-      body: JSON.stringify({ message: "Error al procesar la solicitud", error: error.message }),
+      headers,
+      body: JSON.stringify({
+        message: "Error al actualizar los datos",
+        error: error.message,
+      }),
     };
   }
 };

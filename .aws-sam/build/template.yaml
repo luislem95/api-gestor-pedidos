@@ -38,12 +38,57 @@ Resources:
       CodeUri: GetSesion
     Metadata:
       SamResourceId: GetSesion
+  UpDateSesion:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handlers/upDatePedido/upDatePedido.handler
+      Runtime: nodejs20.x
+      FunctionName: claro-store-pedido-update-sesion
+      Description: Sirve para modificar cantidades o montos de los carritos que se
+        tengan.
+      Environment:
+        Variables:
+          TABLE_NAME: general-storage
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /update-sesion-cantidad
+            Method: ANY
+      Policies:
+      - DynamoDBCrudPolicy:
+          TableName: general-storage
+      CodeUri: UpDateSesion
+    Metadata:
+      SamResourceId: UpDateSesion
+  deletePedidoSesion:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handlers/deletePedidoSesion/deletePedidoSesion.handler
+      Runtime: nodejs20.x
+      FunctionName: claro-store-pedido-delete-sesion
+      Description: Sirve para eliminar un item del carrito.
+      Environment:
+        Variables:
+          TABLE_NAME: general-storage
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /delete-sesion-item
+            Method: ANY
+      Policies:
+      - DynamoDBCrudPolicy:
+          TableName: general-storage
+      CodeUri: deletePedidoSesion
+    Metadata:
+      SamResourceId: deletePedidoSesion
   UploadImageFunction:
     Type: AWS::Serverless::Function
     Properties:
       Handler: handlers/upLoadImage/upLoadImage.handler
       Runtime: nodejs20.x
-      FunctionName: upLoadImageToS3
+      FunctionName: claro-store-pedido-upLoadImageToS3
       Events:
         Api:
           Type: Api
@@ -64,7 +109,7 @@ Resources:
     Properties:
       Handler: handlers/getS3/getS3.handler
       Runtime: nodejs20.x
-      FunctionName: getSignedUrl
+      FunctionName: claro-store-pedido-getSignedUrl
       Description: "Genera URLs prefirmadas para las im\xE1genes en S3."
       MemorySize: 128
       Environment:
@@ -91,7 +136,7 @@ Resources:
     Properties:
       Handler: handlers/getAllInventario/getAllInventario.handler
       Runtime: nodejs20.x
-      FunctionName: getAllInventario
+      FunctionName: claro-store-pedido-getAllInventario
       Environment:
         Variables:
           TABLE_NAME: general-storage
@@ -112,7 +157,7 @@ Resources:
     Properties:
       Handler: handlers/getAllHistorial/getAllHistorial.handler
       Runtime: nodejs20.x
-      FunctionName: getAllHistorial
+      FunctionName: claro-store-pedido-getAllHistorial
       Environment:
         Variables:
           TABLE_NAME: general-storage
@@ -133,7 +178,7 @@ Resources:
     Properties:
       Handler: handlers/confirmarPedido/confirmarPedido.handler
       Runtime: nodejs20.x
-      FunctionName: confirmar-pedido-claro-store-pedido
+      FunctionName: claro-store-pedido-confirmar-pedido
       Description: Maneja las confirmaciones de claro-estor-pedidos
       MemorySize: 128
       Environment:
@@ -156,7 +201,7 @@ Resources:
     Properties:
       Handler: handlers/putPedido/putPedido.handler
       Runtime: nodejs20.x
-      FunctionName: put-pedido-claro-store-pedido
+      FunctionName: claro-store-pedido-put-pedido
       Description: Maneja las confirmaciones de claro-estor-pedidos
       Environment:
         Variables:

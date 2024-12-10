@@ -1,12 +1,86 @@
-const ddb = require("../../utils/db"); // Configuración de DynamoDB
-const { QueryCommand, UpdateCommand } = require("@aws-sdk/lib-dynamodb");
+const { v4: uuidv4 } = require("uuid");
+const { QueryCommand, PutCommand, UpdateCommand, DeleteCommand } = require("@aws-sdk/lib-dynamodb");
+const ddb = require("../../utils/db");
 
 exports.handler = async (event) => {
+  const headers = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+  };
+
+  if (event.httpMethod === "OPTIONS") {
+    console.log("Solicitud preflight OPTIONS recibida.");
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({ message: "Preflight OPTIONS request handled." }),
+    };
+  }
+
   try {
-    const idUsuario = event.idUsuario; // ID de usuario dinámico pasado en el evento
-    const tipo = "claro-store-sesion"; // Tipo fijo para la sesión
-    const ttl = Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60; // Tiempo actual + 7 días en segundos
-    const fechaActual = new Date().toLocaleString("es-SV", {
+    console.log("Evento recibido:", JSON.stringify(event, null, 2));
+
+    if (!event.body) {
+      throw new Error("El cuerpo de la solicitud está vacío");
+    }
+
+    const body = JSON.parse(event.body);
+    const { id, tipo, estatus } = body; // Nota: 'total' ya no se recibe desde el frontend.
+
+    if (!id || !tipo) {
+      throw new Error("Los campos 'id' y 'tipo' son obligatorios");
+    }
+
+    const tipoDestino = "claro-store-pedido";
+
+    // Buscar datos de la sesión
+    const queryParams = {
+      TableName: "general-storage",
+      KeyConditionExpression: "tipo = :tipo AND id = :id",
+      ExpressionAttributeValues: {
+        ":tipo": tipo,
+        ":id": id,
+      },
+    };
+
+    const sessionData = (await ddb.send(new QueryCommand(queryParams))).Items?.[0];
+    if (!sessionData) {
+      throw new Error("No se encontraron datos para el ID proporcionado.");
+    }
+    console.log("Datos obtenidos de la sesión:", sessionData);
+
+    // Calcular el total general
+    const items = sessionData.carrito || [];
+    const total = items.reduce((sum, item) => {
+      const itemTotal = (item.cantidad || 0) * (item.precio || 0);
+      return sum + itemTotal;
+    }, 0);
+
+    console.log("Total calculado:", total);
+
+    // Actualizar contador y obtener el nuevo valor
+    const updateParams = {
+      TableName: "general-storage",
+      Key: {
+        tipo: "claro-store-contador-pedido",
+        id: "contador",
+      },
+      UpdateExpression: "SET numeroPedido = if_not_exists(numeroPedido, :start) + :incremento",
+      ExpressionAttributeValues: {
+        ":start": 0,
+        ":incremento": 1,
+      },
+      ReturnValues: "UPDATED_NEW",
+    };
+
+    const contadorResult = await ddb.send(new UpdateCommand(updateParams));
+    const numeroPedido = contadorResult.Attributes.numeroPedido;
+    console.log("Número de pedido actualizado:", numeroPedido);
+
+    // Crear nuevo pedido
+    const nuevoId = uuidv4().replace(/-/g, "");
+    const fechaActual = new Date().toLocaleDateString("es-SV", {
       timeZone: "America/El_Salvador",
       year: "numeric",
       month: "2-digit",
@@ -16,102 +90,64 @@ exports.handler = async (event) => {
       second: "2-digit",
     });
 
-    // Parámetros para verificar si ya existe la sesión
-    const queryParams = {
-      TableName: "general-storage",
-      KeyConditionExpression: "tipo = :tipo AND id = :idUsuario", // Clave de partición y clave de ordenamiento
-      ExpressionAttributeValues: {
-        ":tipo": tipo, // Valor fijo para tipo
-        ":idUsuario": idUsuario, // ID dinámico del usuario
+    const nuevoPedido = {
+      tipo: tipoDestino,
+      id: nuevoId,
+      numeroPedido,
+      duiEmpleado: id,
+      items,
+      total,
+      estatus: estatus || "Nuevo",
+      fecha: fechaActual,
+      duiEmpresa: sessionData.duiEmpresa,
+      empleadoName: sessionData.empleadoName,
+      user_id: `claro-store-pedido|${sessionData.duiEmpresa}`,
+      datosAdicionales: {
+        empresa: sessionData.empresaName || "Empresa desconocida",
+        sucursal: "Sucursal Central",
+        nota: "Pedido confirmado automáticamente",
       },
     };
 
-    console.log("Params enviados para consulta:", JSON.stringify(queryParams));
+    console.log("Nuevo pedido generado:", nuevoPedido);
 
-    // Ejecutar el comando Query para buscar la sesión
-    const queryResult = await ddb.send(new QueryCommand(queryParams));
-    console.log("Respuesta de DynamoDB (Query):", JSON.stringify(queryResult));
+    // Insertar nuevo pedido en DynamoDB
+    const putParams = {
+      TableName: "general-storage",
+      Item: nuevoPedido,
+    };
 
-    // Si la sesión ya existe, retornarla
-    if (queryResult.Items && queryResult.Items.length > 0) {
-      return {
-        statusCode: 200,
-        headers: {
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Headers": "Content-Type",
-          "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-        },
-        body: JSON.stringify({
-          message: "Sesión existente",
-          data: queryResult.Items[0],
-        }),
-      };
-    }
+    await ddb.send(new PutCommand(putParams));
 
-    // Parámetros para actualizar o crear la sesión
-    const updateParams = {
+    // Eliminar la sesión
+    const deleteParams = {
       TableName: "general-storage",
       Key: {
         tipo: tipo,
-        id: idUsuario,
+        id: id,
       },
-      UpdateExpression: `
-        SET carrito = if_not_exists(carrito, :carrito),
-            duiEmpleado = :duiEmpleado,
-            duiEmpresa = :duiEmpresa,
-            empleadoName = :empleadoName,
-            empresaName = :empresaName,
-            estatus = :estatus,
-            fecha = :fecha,
-            total = :total,
-            ttl = :ttl,
-            user_id = :user_id
-      `,
-      ExpressionAttributeValues: {
-        ":carrito": [], // Inicia vacío si no existe
-        ":duiEmpleado": idUsuario,
-        ":duiEmpresa": event.duiEmpresa, // Suponiendo que viene en el evento
-        ":empleadoName": event.nombreEmpleado, // Suponiendo que viene en el evento
-        ":empresaName": event.nombreEmpresa, // Suponiendo que viene en el evento
-        ":estatus": "Pendiente",
-        ":fecha": fechaActual,
-        ":total": 0,
-        ":ttl": ttl,
-        ":user_id": `${tipo}|${idUsuario}`,
-      },
-      ReturnValues: "ALL_NEW", // Devuelve todos los valores actualizados o creados
     };
 
-    console.log("Params enviados para actualización:", JSON.stringify(updateParams));
+    await ddb.send(new DeleteCommand(deleteParams));
 
-    // Ejecutar el comando Update
-    const updateResult = await ddb.send(new UpdateCommand(updateParams));
-    console.log("Respuesta de DynamoDB (Update):", JSON.stringify(updateResult));
-
-    // Responder con los datos obtenidos o actualizados
     return {
-      statusCode: 200,
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Headers": "Content-Type",
-        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-      },
+      statusCode: 201,
+      headers,
       body: JSON.stringify({
-        message: "Sesión actualizada o creada con éxito",
-        data: updateResult.Attributes,
+        message: "Pedido confirmado y sesión eliminada exitosamente",
+        data: nuevoPedido,
       }),
     };
   } catch (error) {
-    console.error("Error al ejecutar la consulta en DynamoDB:", error);
+    console.error("Error al procesar la solicitud:", error);
 
     return {
       statusCode: 500,
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Headers": "Content-Type",
-        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-      },
-      body: JSON.stringify({ error: "Error al obtener o actualizar la sesión" }),
+      headers,
+      body: JSON.stringify({
+        message: "Error al confirmar el pedido",
+        error: error.message,
+      }),
     };
   }
 };

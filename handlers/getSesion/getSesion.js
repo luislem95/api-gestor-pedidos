@@ -1,50 +1,86 @@
-const { QueryCommand, UpdateCommand } = require("@aws-sdk/lib-dynamodb");
-const ddb = require("../../utils/db"); // Configuración de DynamoDB
+const { v4: uuidv4 } = require("uuid");
+const { QueryCommand, PutCommand, UpdateCommand, DeleteCommand } = require("@aws-sdk/lib-dynamodb");
+const ddb = require("../../utils/db");
 
 exports.handler = async (event) => {
+  const headers = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+  };
+
+  if (event.httpMethod === "OPTIONS") {
+    console.log("Solicitud preflight OPTIONS recibida.");
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({ message: "Preflight OPTIONS request handled." }),
+    };
+  }
+
   try {
-    console.log("Evento recibido:", JSON.stringify(event));
+    console.log("Evento recibido:", JSON.stringify(event, null, 2));
 
-    const idUsuario = event.queryStringParameters?.idUsuario;
-    const tipo = "claro-store-sesion";
-
-    if (!idUsuario) {
-      throw new Error("El ID de usuario (idUsuario) es obligatorio");
+    if (!event.body) {
+      throw new Error("El cuerpo de la solicitud está vacío");
     }
 
-    // Verificar si ya existe la sesión
-    const params = {
+    const body = JSON.parse(event.body);
+    const { id, tipo, estatus } = body; // Nota: 'total' ya no se recibe desde el frontend.
+
+    if (!id || !tipo) {
+      throw new Error("Los campos 'id' y 'tipo' son obligatorios");
+    }
+
+    const tipoDestino = "claro-store-pedido";
+
+    // Buscar datos de la sesión
+    const queryParams = {
       TableName: "general-storage",
-      KeyConditionExpression: "tipo = :tipo AND id = :idUsuario",
+      KeyConditionExpression: "tipo = :tipo AND id = :id",
       ExpressionAttributeValues: {
         ":tipo": tipo,
-        ":idUsuario": idUsuario,
+        ":id": id,
       },
     };
 
-    console.log("Params enviados para Query:", JSON.stringify(params));
-    const data = await ddb.send(new QueryCommand(params));
-    console.log("Respuesta de Query:", JSON.stringify(data));
-
-    if (data.Items && data.Items.length > 0) {
-      // Sesión encontrada
-      return {
-        statusCode: 200,
-        headers: {
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Headers": "Content-Type",
-          "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-        },
-        body: JSON.stringify({
-          message: "Sesión encontrada",
-          data: data.Items[0],
-        }),
-      };
+    const sessionData = (await ddb.send(new QueryCommand(queryParams))).Items?.[0];
+    if (!sessionData) {
+      throw new Error("No se encontraron datos para el ID proporcionado.");
     }
+    console.log("Datos obtenidos de la sesión:", sessionData);
 
-    // Crear nueva sesión con UpdateCommand
-    const ttl = Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60; // TTL de 7 días
-    const fechaActual = new Date().toLocaleString("es-SV", {
+    // Calcular el total general
+    const items = sessionData.carrito || [];
+    const total = items.reduce((sum, item) => {
+      const itemTotal = (item.cantidad || 0) * (item.precio || 0);
+      return sum + itemTotal;
+    }, 0);
+
+    console.log("Total calculado:", total);
+
+    // Actualizar contador y obtener el nuevo valor
+    const updateParams = {
+      TableName: "general-storage",
+      Key: {
+        tipo: "claro-store-contador-pedido",
+        id: "contador",
+      },
+      UpdateExpression: "SET numeroPedido = if_not_exists(numeroPedido, :start) + :incremento",
+      ExpressionAttributeValues: {
+        ":start": 0,
+        ":incremento": 1,
+      },
+      ReturnValues: "UPDATED_NEW",
+    };
+
+    const contadorResult = await ddb.send(new UpdateCommand(updateParams));
+    const numeroPedido = contadorResult.Attributes.numeroPedido;
+    console.log("Número de pedido actualizado:", numeroPedido);
+
+    // Crear nuevo pedido
+    const nuevoId = uuidv4().replace(/-/g, "");
+    const fechaActual = new Date().toLocaleDateString("es-SV", {
       timeZone: "America/El_Salvador",
       year: "numeric",
       month: "2-digit",
@@ -54,84 +90,64 @@ exports.handler = async (event) => {
       second: "2-digit",
     });
 
-    const updateParams = {
-      TableName: "general-storage",
-      Key: { tipo, id: idUsuario },
-      UpdateExpression: `
-        SET carrito = if_not_exists(carrito, :carrito),
-            duiEmpleado = :duiEmpleado,
-            duiEmpresa = :duiEmpresa,
-            empleadoName = :empleadoName,
-            empresaName = :empresaName,
-            estatus = :estatus,
-            fecha = :fecha,
-            #total = if_not_exists(#total, :total),
-            #ttl = :ttl,
-            user_id = :user_id
-      `,
-      ExpressionAttributeNames: {
-        "#total": "total", // Alias para palabra reservada
-        "#ttl": "ttl",
+    const nuevoPedido = {
+      tipo: tipoDestino,
+      id: nuevoId,
+      numeroPedido,
+      duiEmpleado: id,
+      items,
+      total,
+      estatus: estatus || "Nuevo",
+      fecha: fechaActual,
+      duiEmpresa: sessionData.duiEmpresa,
+      empleadoName: sessionData.empleadoName,
+      user_id: `claro-store-pedido|${sessionData.duiEmpresa}`,
+      datosAdicionales: {
+        empresa: sessionData.empresaName || "Empresa desconocida",
+        sucursal: "Sucursal Central",
+        nota: "Pedido confirmado automáticamente",
       },
-      ExpressionAttributeValues: {
-        ":carrito": [],
-        ":duiEmpleado": idUsuario,
-        ":duiEmpresa": "090090990",
-        ":empleadoName": "Marta Sanchez",
-        ":empresaName": "Super Selectos",
-        ":estatus": "Pendiente",
-        ":fecha": fechaActual,
-        ":total": 0,
-        ":ttl": ttl,
-        ":user_id": `claro-store-sesion|${idUsuario}`,
-      },
-      ReturnValues: "ALL_NEW",
     };
 
-    console.log("Params enviados para UpdateCommand:", JSON.stringify(updateParams));
+    console.log("Nuevo pedido generado:", nuevoPedido);
 
-    try {
-      const updatedData = await ddb.send(new UpdateCommand(updateParams));
-      console.log("Respuesta de UpdateCommand:", JSON.stringify(updatedData));
+    // Insertar nuevo pedido en DynamoDB
+    const putParams = {
+      TableName: "general-storage",
+      Item: nuevoPedido,
+    };
 
-      return {
-        statusCode: 200,
-        headers: {
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Headers": "Content-Type",
-          "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-        },
-        body: JSON.stringify({
-          message: "Nueva sesión creada",
-          data: updatedData.Attributes,
-        }),
-      };
-    } catch (updateError) {
-      console.error("Error al crear la sesión:", updateError);
-      return {
-        statusCode: 200, // Seguimos con un 200 para evitar que Axios lo trate como error
-        headers: {
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Headers": "Content-Type",
-          "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-        },
-        body: JSON.stringify({
-          message: "Error creando nueva sesión, pero no se detendrá el flujo",
-          error: updateError.message,
-        }),
-      };
-    }
+    await ddb.send(new PutCommand(putParams));
+
+    // Eliminar la sesión
+    const deleteParams = {
+      TableName: "general-storage",
+      Key: {
+        tipo: tipo,
+        id: id,
+      },
+    };
+
+    await ddb.send(new DeleteCommand(deleteParams));
+
+    return {
+      statusCode: 201,
+      headers,
+      body: JSON.stringify({
+        message: "Pedido confirmado y sesión eliminada exitosamente",
+        data: nuevoPedido,
+      }),
+    };
   } catch (error) {
-    console.error("Error general:", error);
+    console.error("Error al procesar la solicitud:", error);
 
     return {
       statusCode: 500,
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Headers": "Content-Type",
-        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-      },
-      body: JSON.stringify({ error: error.message }),
+      headers,
+      body: JSON.stringify({
+        message: "Error al confirmar el pedido",
+        error: error.message,
+      }),
     };
   }
 };
