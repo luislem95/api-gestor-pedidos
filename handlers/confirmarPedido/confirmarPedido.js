@@ -66,29 +66,28 @@ exports.handler = async (event) => {
         tipo: "claro-store-contador-pedido",
         id: "contador",
       },
-      UpdateExpression: "SET numeroPedido = if_not_exists(numeroPedido, :start) + :incremento",
+      UpdateExpression: "ADD numeroPedido :incremento",
       ExpressionAttributeValues: {
-        ":start": 0,
         ":incremento": 1,
       },
       ReturnValues: "UPDATED_NEW",
     };
-
+    
     const contadorResult = await ddb.send(new UpdateCommand(updateParams));
-    const numeroPedido = contadorResult.Attributes.numeroPedido;
+    
+    // Verificar si el contador fue actualizado y obtener su valor
+    const numeroPedido = contadorResult.Attributes?.numeroPedido || 0;
     console.log("Número de pedido actualizado:", numeroPedido);
 
     // Crear nuevo pedido
     const nuevoId = uuidv4().replace(/-/g, "");
-    const fechaActual = new Date().toLocaleDateString("es-SV", {
-      timeZone: "America/El_Salvador",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-    });
+    const fechaActual = new Date();
+  
+    // Restar 6 horas
+    fechaActual.setHours(fechaActual.getHours() - 6);
+  
+    // Convertir la fecha a formato ISO (puedes ajustar el formato si es necesario)
+    const fechaUTCAdjustada = fechaActual.toISOString();
 
     const nuevoPedido = {
       tipo: tipoDestino,
@@ -98,7 +97,7 @@ exports.handler = async (event) => {
       items,
       total,
       estatus: estatus || "Nuevo",
-      fecha: fechaActual,
+      fecha: fechaUTCAdjustada,
       duiEmpresa: sessionData.duiEmpresa,
       empleadoName: sessionData.empleadoName,
       user_id: `claro-store-pedido|${sessionData.duiEmpresa}`,
