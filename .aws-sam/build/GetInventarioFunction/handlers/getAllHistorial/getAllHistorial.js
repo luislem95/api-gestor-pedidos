@@ -1,4 +1,4 @@
-const ddb = require("../../utils/db"); // Configuración de DynamoDB
+const ddb = require("./utils/db"); // Configuración de DynamoDB
 const { QueryCommand } = require("@aws-sdk/lib-dynamodb");
 
 exports.handler = async (event) => {

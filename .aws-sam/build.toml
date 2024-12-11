@@ -7,6 +7,51 @@ architecture = "x86_64"
 handler = "handlers/getAllUsers.handler"
 manifest_hash = ""
 packagetype = "Zip"
-functions = ["GetSesion", "UpDateSesion", "deletePedidoSesion", "UploadImageFunction", "GetSignedUrlFunction", "GetInventarioFunction", "GetHistorialFunction", "ConfirmarPedido", "PutPedido"]
+functions = ["UpDateSesion", "UploadImageFunction", "GetSignedUrlFunction", "GetInventarioFunction"]
+
+[function_build_definitions.dfa7639e-1456-4b0f-9031-be54133c5673]
+codeuri = "C:\\Users\\luisr.lemus\\Desktop\\gestor-pedidos\\api-gestor-pedidos\\handlers\\getSesion"
+runtime = "nodejs20.x"
+architecture = "x86_64"
+handler = "app.handler"
+manifest_hash = ""
+packagetype = "Zip"
+functions = ["GetSesion"]
+
+[function_build_definitions.7a86eb18-c93f-440f-8608-9c51846c6cbc]
+codeuri = "C:\\Users\\luisr.lemus\\Desktop\\gestor-pedidos\\api-gestor-pedidos\\handlers\\putPedido"
+runtime = "nodejs20.x"
+architecture = "x86_64"
+handler = "putPedido.handler"
+manifest_hash = ""
+packagetype = "Zip"
+functions = ["PutPedido"]
+
+[function_build_definitions.707a476d-0e61-4745-a1c0-28925d6f22a3]
+codeuri = "C:\\Users\\luisr.lemus\\Desktop\\gestor-pedidos\\api-gestor-pedidos\\handlers\\getAllHistorial"
+runtime = "nodejs20.x"
+architecture = "x86_64"
+handler = "getAllHistorial.handler"
+manifest_hash = ""
+packagetype = "Zip"
+functions = ["GetHistorialFunction"]
+
+[function_build_definitions.207f229b-71c0-473e-9549-3dec6a0f39cb]
+codeuri = "C:\\Users\\luisr.lemus\\Desktop\\gestor-pedidos\\api-gestor-pedidos\\handlers\\deletePedidoSesion"
+runtime = "nodejs20.x"
+architecture = "x86_64"
+handler = "deletePedidoSesion.handler"
+manifest_hash = ""
+packagetype = "Zip"
+functions = ["deletePedidoSesion"]
+
+[function_build_definitions.89d67a86-52e9-4c38-a3e8-581d848e8927]
+codeuri = "C:\\Users\\luisr.lemus\\Desktop\\gestor-pedidos\\api-gestor-pedidos\\handlers\\confirmarPedido"
+runtime = "nodejs20.x"
+architecture = "x86_64"
+handler = "confirmarPedido.handler"
+manifest_hash = ""
+packagetype = "Zip"
+functions = ["ConfirmarPedido"]
 
 [layer_build_definitions]

@@ -1,17 +1,14 @@
 const { QueryCommand, UpdateCommand } = require("@aws-sdk/lib-dynamodb");
-const ddb = require("../../utils/db"); // Configuración de DynamoDB
+const ddb = require("./utils/db"); // Configuración de DynamoDB
 
 exports.handler = async (event) => {
   try {
-    console.log("Evento recibido:", JSON.stringify(event));
-
     const idUsuario = event.queryStringParameters?.idUsuario;
     const tipo = "claro-store-sesion";
 
     if (!idUsuario) {
       throw new Error("El ID de usuario (idUsuario) es obligatorio");
     }
-
     // Verificar si ya existe la sesión
     const params = {
       TableName: "general-storage",
@@ -21,10 +18,7 @@ exports.handler = async (event) => {
         ":idUsuario": idUsuario,
       },
     };
-
-    console.log("Params enviados para Query:", JSON.stringify(params));
     const data = await ddb.send(new QueryCommand(params));
-    console.log("Respuesta de Query:", JSON.stringify(data));
 
     if (data.Items && data.Items.length > 0) {
       // Sesión encontrada
@@ -88,12 +82,8 @@ exports.handler = async (event) => {
       ReturnValues: "ALL_NEW",
     };
 
-    console.log("Params enviados para UpdateCommand:", JSON.stringify(updateParams));
-
     try {
       const updatedData = await ddb.send(new UpdateCommand(updateParams));
-      console.log("Respuesta de UpdateCommand:", JSON.stringify(updatedData));
-
       return {
         statusCode: 200,
         headers: {

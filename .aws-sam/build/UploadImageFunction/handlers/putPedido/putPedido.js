@@ -111,8 +111,6 @@ exports.handler = async (event) => {
     // Enviar el comando de actualización
     const result = await dynamoDB.send(new UpdateItemCommand(updateParams));
 
-    console.log("Datos actualizados con éxito:", result.Attributes);
-
     return {
       statusCode: 200,
       headers,

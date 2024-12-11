@@ -3,7 +3,6 @@ const { DynamoDBClient, GetItemCommand, UpdateItemCommand } = require("@aws-sdk/
 const dynamoDB = new DynamoDBClient({ region: "us-east-1" });
 
 exports.handler = async (event) => {
-  console.log("Evento recibido:", JSON.stringify(event, null, 2));
 
   const headers = {
     "Access-Control-Allow-Origin": "*",
@@ -13,7 +12,6 @@ exports.handler = async (event) => {
 
   // Manejar preflight
   if (event.httpMethod === "OPTIONS") {
-    console.log("Preflight OPTIONS request manejada.");
     return {
       statusCode: 200,
       headers,
@@ -21,11 +19,7 @@ exports.handler = async (event) => {
   }
 
   try {
-    console.log("Procesando solicitud...");
-
     const body = JSON.parse(event.body);
-    console.log("Cuerpo de la solicitud:", body);
-
     const { tipo, id, itemId, nuevaCantidad } = body;
 
     // Validar los parámetros necesarios
@@ -39,9 +33,6 @@ exports.handler = async (event) => {
         }),
       };
     }
-
-    console.log("Parámetros validados correctamente. Tipo:", tipo, "ID:", id, "ItemID:", itemId, "NuevaCantidad:", nuevaCantidad);
-
     // Obtener el carrito actual desde DynamoDB
     const getItemParams = {
       TableName: "general-storage",
@@ -52,17 +43,12 @@ exports.handler = async (event) => {
       ProjectionExpression: "carrito", // Solo obtenemos el carrito
     };
 
-    console.log("Obteniendo carrito actual con parámetros:", getItemParams);
-
     const currentData = await dynamoDB.send(new GetItemCommand(getItemParams));
-    console.log("Datos actuales obtenidos de DynamoDB:", JSON.stringify(currentData, null, 2));
 
     let currentCarrito = currentData.Item?.carrito?.L || [];
-    console.log("Carrito actual:", currentCarrito);
 
     // Encontrar el índice del ítem específico
     const itemIndex = currentCarrito.findIndex((item) => item.M.id.S === itemId);
-    console.log("Índice del ítem encontrado:", itemIndex);
 
     if (itemIndex === -1) {
       console.log("El ítem especificado no existe en el carrito.");
@@ -76,9 +62,7 @@ exports.handler = async (event) => {
     }
 
     // Actualizar la cantidad del ítem
-    console.log("Actualizando cantidad del ítem:", currentCarrito[itemIndex]);
     currentCarrito[itemIndex].M.cantidad.N = nuevaCantidad.toString();
-    console.log("Carrito después de actualizar:", currentCarrito);
 
     // Parámetros para actualizar DynamoDB
     const updateParams = {
@@ -95,12 +79,8 @@ exports.handler = async (event) => {
       },
       ReturnValues: "UPDATED_NEW",
     };
-
-    console.log("Enviando actualización a DynamoDB con parámetros:", updateParams);
-
     // Enviar el comando de actualización
     const result = await dynamoDB.send(new UpdateItemCommand(updateParams));
-    console.log("Actualización exitosa. Resultado:", JSON.stringify(result, null, 2));
 
     return {
       statusCode: 200,

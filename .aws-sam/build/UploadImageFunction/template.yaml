@@ -24,10 +24,11 @@ Resources:
   GetSesion:
     Type: AWS::Serverless::Function
     Properties:
-      Handler: handlers/getSesion/getSesion.handler
+      CodeUri: handlers/getSesion
+      Handler: getSesion.handler
       Runtime: nodejs20.x
-      FunctionName: claro-store-pedido-getSesion   
-      Description: Sirve para traer la sesion o crear una si no existe y poder manejar el carrito.
+      FunctionName: claro-store-pedido-getSesion
+      Description: "Lambda para obtener o crear sesiones"
       Environment:
         Variables:
           TABLE_NAME: general-storage
@@ -38,8 +39,8 @@ Resources:
             Path: /sesion
             Method: ANY
       Policies:
-      - DynamoDBCrudPolicy:
-          TableName: general-storage
+        - DynamoDBCrudPolicy:
+            TableName: general-storage
 #aqui lo que hago es manejar el carrito y a sea ingresar un item nuevo
 #o actualizarlo con mas items y cantidades 
   UpDateSesion:
@@ -65,7 +66,8 @@ Resources:
   deletePedidoSesion:
     Type: AWS::Serverless::Function
     Properties:
-      Handler: handlers/deletePedidoSesion/deletePedidoSesion.handler
+      CodeUri: handlers/deletePedidoSesion
+      Handler: deletePedidoSesion.handler
       Runtime: nodejs20.x
       FunctionName: claro-store-pedido-delete-sesion   
       Description: Sirve para eliminar un item del carrito.
@@ -147,7 +149,8 @@ Resources:
   GetHistorialFunction:
     Type: AWS::Serverless::Function
     Properties:
-      Handler: handlers/getAllHistorial/getAllHistorial.handler
+      CodeUri: handlers/getAllHistorial
+      Handler: getAllHistorial.handler
       Runtime: nodejs20.x
       FunctionName: claro-store-pedido-getAllHistorial   
       Environment:
@@ -166,7 +169,8 @@ Resources:
   ConfirmarPedido:
     Type: AWS::Serverless::Function
     Properties:
-      Handler: handlers/confirmarPedido/confirmarPedido.handler
+      CodeUri: handlers/confirmarPedido
+      Handler: confirmarPedido.handler
       Runtime: nodejs20.x
       FunctionName: claro-store-pedido-confirmar-pedido
       Description: 'Maneja las confirmaciones de claro-estor-pedidos'
@@ -183,14 +187,15 @@ Resources:
       Policies:
       - DynamoDBCrudPolicy:
           TableName: general-storage
-
+#ingresa los items al carrito o los actualiza dependiendo que es lo que se quiera hacer 
   PutPedido:
     Type: AWS::Serverless::Function
     Properties:
-      Handler: handlers/putPedido/putPedido.handler
+      CodeUri: handlers/putPedido
+      Handler: putPedido.handler
       Runtime: nodejs20.x
       FunctionName: claro-store-pedido-put-pedido
-      Description: 'Maneja las confirmaciones de claro-estor-pedidos'
+      Description: 'Maneja los insert de pedidos de claro-estore-pedidos'
       Environment:
         Variables:
           TABLE_NAME: general-storage

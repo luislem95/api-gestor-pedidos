@@ -18,11 +18,11 @@ Resources:
   GetSesion:
     Type: AWS::Serverless::Function
     Properties:
-      Handler: handlers/getSesion/getSesion.handler
+      CodeUri: GetSesion
+      Handler: getSesion.handler
       Runtime: nodejs20.x
       FunctionName: claro-store-pedido-getSesion
-      Description: Sirve para traer la sesion o crear una si no existe y poder manejar
-        el carrito.
+      Description: Lambda para obtener o crear sesiones
       Environment:
         Variables:
           TABLE_NAME: general-storage
@@ -35,7 +35,6 @@ Resources:
       Policies:
       - DynamoDBCrudPolicy:
           TableName: general-storage
-      CodeUri: GetSesion
     Metadata:
       SamResourceId: GetSesion
   UpDateSesion:
@@ -64,7 +63,8 @@ Resources:
   deletePedidoSesion:
     Type: AWS::Serverless::Function
     Properties:
-      Handler: handlers/deletePedidoSesion/deletePedidoSesion.handler
+      CodeUri: deletePedidoSesion
+      Handler: deletePedidoSesion.handler
       Runtime: nodejs20.x
       FunctionName: claro-store-pedido-delete-sesion
       Description: Sirve para eliminar un item del carrito.
@@ -80,7 +80,6 @@ Resources:
       Policies:
       - DynamoDBCrudPolicy:
           TableName: general-storage
-      CodeUri: deletePedidoSesion
     Metadata:
       SamResourceId: deletePedidoSesion
   UploadImageFunction:
@@ -155,7 +154,8 @@ Resources:
   GetHistorialFunction:
     Type: AWS::Serverless::Function
     Properties:
-      Handler: handlers/getAllHistorial/getAllHistorial.handler
+      CodeUri: GetHistorialFunction
+      Handler: getAllHistorial.handler
       Runtime: nodejs20.x
       FunctionName: claro-store-pedido-getAllHistorial
       Environment:
@@ -170,13 +170,13 @@ Resources:
       Policies:
       - DynamoDBCrudPolicy:
           TableName: general-storage
-      CodeUri: GetHistorialFunction
     Metadata:
       SamResourceId: GetHistorialFunction
   ConfirmarPedido:
     Type: AWS::Serverless::Function
     Properties:
-      Handler: handlers/confirmarPedido/confirmarPedido.handler
+      CodeUri: ConfirmarPedido
+      Handler: confirmarPedido.handler
       Runtime: nodejs20.x
       FunctionName: claro-store-pedido-confirmar-pedido
       Description: Maneja las confirmaciones de claro-estor-pedidos
@@ -193,16 +193,16 @@ Resources:
       Policies:
       - DynamoDBCrudPolicy:
           TableName: general-storage
-      CodeUri: ConfirmarPedido
     Metadata:
       SamResourceId: ConfirmarPedido
   PutPedido:
     Type: AWS::Serverless::Function
     Properties:
-      Handler: handlers/putPedido/putPedido.handler
+      CodeUri: PutPedido
+      Handler: putPedido.handler
       Runtime: nodejs20.x
       FunctionName: claro-store-pedido-put-pedido
-      Description: Maneja las confirmaciones de claro-estor-pedidos
+      Description: Maneja los insert de pedidos de claro-estore-pedidos
       Environment:
         Variables:
           TABLE_NAME: general-storage
@@ -215,7 +215,6 @@ Resources:
       Policies:
       - DynamoDBCrudPolicy:
           TableName: general-storage
-      CodeUri: PutPedido
     Metadata:
       SamResourceId: PutPedido
 Outputs:

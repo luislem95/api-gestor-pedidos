@@ -1,6 +1,6 @@
 const { v4: uuidv4 } = require("uuid");
 const { QueryCommand, PutCommand, UpdateCommand, DeleteCommand } = require("@aws-sdk/lib-dynamodb");
-const ddb = require("../../utils/db");
+const ddb = require("./utils/db");
 
 exports.handler = async (event) => {
   const headers = {
