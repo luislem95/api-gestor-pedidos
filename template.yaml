@@ -27,7 +27,7 @@ Resources:
       CodeUri: handlers/getSesion
       Handler: getSesion.handler
       Runtime: nodejs20.x
-      FunctionName: claro-store-pedido-getSesion
+      FunctionName: claro-store-sesion-getSesion
       Description: "Lambda para obtener o crear sesiones"
       Environment:
         Variables:
@@ -46,9 +46,10 @@ Resources:
   UpDateSesion:
     Type: AWS::Serverless::Function
     Properties:
-      Handler: handlers/upDatePedido/upDatePedido.handler
+      CodeUri: handlers/upDatePedido
+      Handler: upDatePedido.handler
       Runtime: nodejs20.x
-      FunctionName: claro-store-pedido-update-sesion   
+      FunctionName: claro-store-sesion-update-sesion   
       Description: Sirve para modificar cantidades o montos de los carritos que se tengan.
       Environment:
         Variables:
@@ -69,7 +70,7 @@ Resources:
       CodeUri: handlers/deletePedidoSesion
       Handler: deletePedidoSesion.handler
       Runtime: nodejs20.x
-      FunctionName: claro-store-pedido-delete-sesion   
+      FunctionName: claro-store-sesion-delete-sesion   
       Description: Sirve para eliminar un item del carrito.
       Environment:
         Variables:
@@ -87,7 +88,8 @@ Resources:
   UploadImageFunction:
     Type: AWS::Serverless::Function
     Properties:
-      Handler: handlers/upLoadImage/upLoadImage.handler
+      CodeUri: handlers/upLoadImage
+      Handler: upLoadImage.handler
       Runtime: nodejs20.x
       FunctionName: claro-store-pedido-upLoadImageToS3
       Events:
@@ -106,9 +108,10 @@ Resources:
   GetSignedUrlFunction:
     Type: AWS::Serverless::Function
     Properties:
-      Handler: handlers/getS3/getS3.handler
+      CodeUri: handlers/getS3
+      Handler: getS3.handler
       Runtime: nodejs20.x
-      FunctionName: claro-store-pedido-getSignedUrl
+      FunctionName: claro-store-sesion-getSignedUrl
       Description: Genera URLs prefirmadas para las imágenes en S3.
       MemorySize: 128
       Environment:
@@ -129,9 +132,10 @@ Resources:
   GetInventarioFunction:
     Type: AWS::Serverless::Function
     Properties:
-      Handler: handlers/getAllInventario/getAllInventario.handler
+      CodeUri: handlers/getAllInventario
+      Handler: getAllInventario.handler
       Runtime: nodejs20.x
-      FunctionName: claro-store-pedido-getAllInventario   
+      FunctionName: claro-store-inventario-getAllInventario   
       Environment:
         Variables:
           TABLE_NAME: general-storage
@@ -194,7 +198,7 @@ Resources:
       CodeUri: handlers/putPedido
       Handler: putPedido.handler
       Runtime: nodejs20.x
-      FunctionName: claro-store-pedido-put-pedido
+      FunctionName: claro-store-sesion-put-carrito
       Description: 'Maneja los insert de pedidos de claro-estore-pedidos'
       Environment:
         Variables:

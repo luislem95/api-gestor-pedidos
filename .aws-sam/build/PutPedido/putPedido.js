@@ -3,15 +3,13 @@ const { DynamoDBClient, GetItemCommand, UpdateItemCommand } = require("@aws-sdk/
 const dynamoDB = new DynamoDBClient({ region: "us-east-1" });
 
 exports.handler = async (event) => {
-  const fechaActual = new Date().toLocaleString("es-SV", {
-    timeZone: "America/El_Salvador",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
+  const fechaActual = new Date();
+  
+  // Restar 6 horas
+  fechaActual.setHours(fechaActual.getHours() - 6);
+
+  // Convertir la fecha a formato ISO (puedes ajustar el formato si es necesario)
+  const fechaUTCAdjustada = fechaActual.toISOString();
 
   const headers = {
     "Access-Control-Allow-Origin": "*",
@@ -102,7 +100,7 @@ exports.handler = async (event) => {
       },
       ExpressionAttributeValues: {
         ":estatus": { S: estatus || "Pendiente" },
-        ":fecha": { S: fechaActual },
+        ":fecha": { S: fechaUTCAdjustada },
         ":updatedCarrito": { L: currentCarrito },
       },
       ReturnValues: "UPDATED_NEW",

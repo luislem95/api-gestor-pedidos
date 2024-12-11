@@ -1,20 +1,16 @@
 {
-  "name": "api-gestor-pedidos",
+  "name": "getallinventario",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "getAllInventario.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.709.0",
-    "@aws-sdk/client-s3": "^3.701.0",
     "@aws-sdk/lib-dynamodb": "^3.709.0",
-    "dotenv": "^16.4.7",
-    "nodemon": "^3.1.7",
-    "uuid": "^11.0.3"
+    "dotenv": "^16.4.7"
   }
 }
