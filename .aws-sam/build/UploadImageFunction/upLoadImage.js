@@ -13,7 +13,7 @@ exports.handler = async (event) => {
   console.log("Event received:", event);
 
   const headers = {
-    "Access-Control-Allow-Origin": "http://localhost:5173",
+    "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Access-Control-Allow-Headers": "*",
   };
@@ -21,7 +21,11 @@ exports.handler = async (event) => {
   if (event.httpMethod === "OPTIONS") {
     return {
       statusCode: 200,
-      headers,
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type",
+      },
     };
   }
 

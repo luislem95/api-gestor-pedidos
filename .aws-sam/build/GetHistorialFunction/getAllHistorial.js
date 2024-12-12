@@ -10,29 +10,31 @@ exports.handler = async (event) => {
     }
         // Calcular las fechas de hoy y hace 30 días
         const now = new Date();
-        const past = new Date();
+        now.setHours(now.getHours() - 6);
+        const past = new Date(now);
         past.setDate(now.getDate() - 30);
     
         const fechaHoy = now.toISOString();
         const fechaHace30Dias = past.toISOString();
-    const params = {
-      TableName: "general-storage",
-      IndexName: "user_id-tipo-index", // Nombre del índice secundario configurado en DynamoDB
-      KeyConditionExpression: "#user_id = :userIdValue AND #tipo = :tipoValue", // Clave de partición e índice de ordenamiento
-      FilterExpression: "#fecha BETWEEN :fechaInicio AND :fechaFin", // Filtro de fechas
-      ExpressionAttributeNames: {
-        "#user_id": "user_id", // Clave de partición en el índice
-        "#tipo": "tipo", // Clave de ordenamiento en el índice
-        "#fecha": "fecha", // Atributo de la fecha
-      },
-      ExpressionAttributeValues: {
-        ":userIdValue": `claro-store-pedido|${codigoUsuario}`, 
-        ":tipoValue": "claro-store-pedido", 
-        ":fechaInicio": fechaHace30Dias,
-        ":fechaFin": fechaHoy,
-      },
-    };
-
+    
+        const params = {
+          TableName: "general-storage",
+          IndexName: "user_id-tipo-index", // Nombre del índice secundario configurado en DynamoDB
+          KeyConditionExpression: "#user_id = :userIdValue AND #tipo = :tipoValue", // Clave de partición e índice de ordenamiento
+          FilterExpression: "#fecha_insert_pedido BETWEEN :fechaInicio AND :fechaFin", // Filtro de fechas
+          ExpressionAttributeNames: {
+            "#user_id": "user_id", // Clave de partición en el índice
+            "#tipo": "tipo", // Clave de ordenamiento en el índice
+            "#fecha_insert_pedido": "fecha_insert_pedido", // Atributo de la fecha
+          },
+          ExpressionAttributeValues: {
+            ":userIdValue": `claro-store-pedido|${codigoUsuario}`, 
+            ":tipoValue": "claro-store-pedido", 
+            ":fechaInicio": fechaHace30Dias,
+            ":fechaFin": fechaHoy,
+          },
+        };
+        
     console.log("Parámetros de la consulta:", JSON.stringify(params));
 
     const data = await ddb.send(new QueryCommand(params));

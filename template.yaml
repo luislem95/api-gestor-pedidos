@@ -100,7 +100,7 @@ Resources:
             Method: ANY
       Policies:
         - S3CrudPolicy:
-            BucketName: !Ref S3Store  
+            BucketName: 'clarosv-store'
         - DynamoDBCrudPolicy:
             TableName: general-storage
 #hago una firma autorizada para poder previsualizar las imagenes
@@ -212,6 +212,28 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: general-storage
+#antes de que el pedido sea enviado y que la imagen subida se puede cancelar y este es el lambda para ello  
+  CancelarPedido:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: handlers/cancelarPedido
+      Handler: cancelarPedido.handler
+      Runtime: nodejs20.x
+      FunctionName: claro-store-pedido-cancelar-pedido
+      Description: 'Maneja las cancelaciones de claro-estor-pedidos'
+      MemorySize: 128
+      Environment:
+        Variables:
+          TABLE_NAME: general-storage
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /cancelar-pedido
+            Method: ANY
+      Policies:
+      - DynamoDBCrudPolicy:
+          TableName: general-storage
 
 Outputs:
   ApiGatewayEndpoint:

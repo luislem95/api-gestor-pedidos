@@ -7,6 +7,4 @@ region = "us-east-1"
 confirm_changeset = true
 capabilities = "CAPABILITY_IAM"
 image_repositories = []
-bucket_name = "clarosv-store"
-key_prefix = "tienda-pedidos/"
 parameter_overrides = "LayerLambdaAPI=\"arn:aws:lambda:us-east-1:527847838144:layer:lambda-api-v1:1\" S3Store=\"clarosv-store\" S3ImagenesFolder=\"tienda-pedidos/\""

@@ -97,8 +97,7 @@ Resources:
             Method: ANY
       Policies:
       - S3CrudPolicy:
-          BucketName:
-            Ref: S3Store
+          BucketName: clarosv-store
       - DynamoDBCrudPolicy:
           TableName: general-storage
     Metadata:
@@ -217,6 +216,29 @@ Resources:
           TableName: general-storage
     Metadata:
       SamResourceId: PutPedido
+  CancelarPedido:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: CancelarPedido
+      Handler: cancelarPedido.handler
+      Runtime: nodejs20.x
+      FunctionName: claro-store-pedido-cancelar-pedido
+      Description: Maneja las cancelaciones de claro-estor-pedidos
+      MemorySize: 128
+      Environment:
+        Variables:
+          TABLE_NAME: general-storage
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /cancelar-pedido
+            Method: ANY
+      Policies:
+      - DynamoDBCrudPolicy:
+          TableName: general-storage
+    Metadata:
+      SamResourceId: CancelarPedido
 Outputs:
   ApiGatewayEndpoint:
     Description: "URL del endpoint de API Gateway para la funci\xF3n GetAllUsersFunction"

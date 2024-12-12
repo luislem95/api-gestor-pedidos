@@ -81,4 +81,13 @@ manifest_hash = ""
 packagetype = "Zip"
 functions = ["UploadImageFunction"]
 
+[function_build_definitions.904280a8-3f4a-4e28-aba9-69ad37659eeb]
+codeuri = "C:\\Users\\luisr.lemus\\Desktop\\gestor-pedidos\\api-gestor-pedidos\\handlers\\cancelarPedido"
+runtime = "nodejs20.x"
+architecture = "x86_64"
+handler = "cancelarPedido.handler"
+manifest_hash = ""
+packagetype = "Zip"
+functions = ["CancelarPedido"]
+
 [layer_build_definitions]
